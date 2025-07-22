@@ -8,8 +8,8 @@ struct Tensor4D {
     T *data;
 
     Tensor4D(unsigned int const shape_[4], T const *data_) {
-        unsigned int size = 1;
-        // TODO: 填入正确的 shape 并计算 size
+        unsigned int size = shape_[0] * shape_[1] * shape_[2] * shape_[3];
+        std::memcpy(shape, shape_, 4 * sizeof(unsigned int));
         data = new T[size];
         std::memcpy(data, data_, size * sizeof(T));
     }
@@ -27,7 +27,24 @@ struct Tensor4D {
     // 例如，`this` 形状为 `[1, 2, 3, 4]`，`others` 形状为 `[1, 2, 1, 4]`，
     // 则 `this` 与 `others` 相加时，3 个形状为 `[1, 2, 1, 4]` 的子张量各自与 `others` 对应项相加。
     Tensor4D &operator+=(Tensor4D const &others) {
-        // TODO: 实现单向广播的加法
+        ASSERT(others.shape[0] == shape[0] || others.shape[0] == 1, "invalid shape");
+        ASSERT(others.shape[1] == shape[1] || others.shape[1] == 1, "invalid shape");
+        ASSERT(others.shape[2] == shape[2] || others.shape[2] == 1, "invalid shape");
+        ASSERT(others.shape[3] == shape[3] || others.shape[3] == 1, "invalid shape");
+        for (unsigned int x0 = 0; x0 < shape[0]; x0++) {
+            for (unsigned int x1 = 0; x1 < shape[1]; x1++) {
+                for (unsigned int x2 = 0; x2 < shape[2]; x2++) {
+                    for (unsigned int x3 = 0; x3 < shape[3]; x3++) {
+                        int this_offset = x0 * shape[1] * shape[2] * shape[3] + x1 * shape[2] * shape[3] + x2 * shape[3] + x3;
+                        int other_offset = others.shape[0] == 1 ? 0 : x0 * others.shape[1] * others.shape[2] * others.shape[3];
+                        other_offset += others.shape[1] == 1 ? 0 : x1 * others.shape[2] * others.shape[3];
+                        other_offset += others.shape[2] == 1 ? 0 : x2 * others.shape[3];
+                        other_offset += others.shape[3] == 1 ? 0 : x3;
+                        data[this_offset] += others.data[other_offset];
+                    }
+                }
+            }
+        }
         return *this;
     }
 };
